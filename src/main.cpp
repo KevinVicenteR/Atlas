@@ -1,23 +1,26 @@
 #include <Arduino.h>
 
-#include "application/AtlasApp.h"
-#include "hardware/AvrClock.h"
-#include "hardware/AvrDrivetrain.h"
-#include "hardware/AvrEepromStorage.h"
-#include "hardware/AvrLineSensorBus.h"
-#include "hardware/AvrOperatorPanel.h"
-#include "parameters/RobotConfig.h"
+#include "aplicacion/AtlasApp.h"
+#include "reloj/AvrClock.h"
+#include "diagnostico/AvrDiagnostics.h"
+#include "motores/AvrDrivetrain.h"
+#include "memoria/AvrEepromStorage.h"
+#include "sensores/AvrLineSensorBus.h"
+#include "panel/AvrOperatorPanel.h"
+#include "parametros/Config.h"
 #include "control/LineFollower.h"
-#include "sensors/LineSensorArray.h"
-#include "parameters/Profiles.h"
-#include "parameters/UserSettings.h"
-#include "parameters/MotorHardware.h"
-#include "track/TrackMap.h"
+#include "sensores/LineSensorArray.h"
+#include "parametros/FirmwareConfig.h"
+#include "aprendizaje/TrackMap.h"
 
 using namespace atlas;
 
-const RobotConfig kSafeConfig = makeConfig(safeProfile());
-const RobotConfig kFastConfig = makeFastConfig();
+constexpr MotorPolarity kLeftMotorPolarity = MotorPolarity::Normal;
+constexpr MotorPolarity kRightMotorPolarity = MotorPolarity::Normal;
+
+constexpr RobotConfig kSafeConfig = primeraRondaConfig();
+constexpr RobotConfig kFastConfig = segundaRondaConfig();
+constexpr RobotConfig kThirdConfig = terceraRondaConfig();
 
 AvrClock robotClock;
 AvrOperatorPanel panel;
@@ -28,10 +31,13 @@ AvrDrivetrain drivetrain(kLeftMotorPolarity, kRightMotorPolarity, kSafeConfig.mo
 
 LineSensorArray sensors(sensorBus, kSafeConfig.sensors);
 LineFollower follower(sensors, drivetrain, kSafeConfig);
+AvrDiagnostics diagnostics(robotClock, panel, panel, sensors, drivetrain, kSafeConfig, &eeprom, &trackMap);
 
 AppOptions makeAppOptions() {
   AppOptions options;
+  options.diagnostics = &diagnostics;
   options.fastConfig = &kFastConfig;
+  options.thirdConfig = &kThirdConfig;
   options.storage = &eeprom;
   options.trackMap = &trackMap;
   return options;
@@ -49,4 +55,6 @@ void setup() {
   app.begin();
 }
 
-void loop() { app.tick(); }
+void loop() {
+  app.tick();
+}
